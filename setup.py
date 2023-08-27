@@ -6,7 +6,7 @@ https://github.com/pypa/sampleproject
 
 __author__ = "Dan Von Pasecky"
 __email__ = "danvonpasecky@gmail.com"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __license__ = "MIT"
 
 import pathlib
