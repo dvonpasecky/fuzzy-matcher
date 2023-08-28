@@ -6,7 +6,7 @@ https://github.com/pypa/sampleproject
 
 __author__ = "Dan Von Pasecky"
 __email__ = "danvonpasecky@gmail.com"
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 __license__ = "MIT"
 
 import pathlib
@@ -21,6 +21,7 @@ setup(
     version=__version__,
     description="Levenshtein Distance Matcher",
     long_description=long_description,
+    python_requires=">=3.9",
     license=__license__,
     author=__author__,
     author_email=__email__,
