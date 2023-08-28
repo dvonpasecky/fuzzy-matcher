@@ -129,7 +129,7 @@ def handle_manual_slider(max_distance: int) -> int:
         st.session_state.auto_slider_value = 0
 
     st.latex(
-        f"\\text{{Automatic Slider Value}} = 100 \\times \\left(1 - \\frac{{{slider_value}}}{{{max_distance}}}\\right) = {st.session_state.auto_slider_value}"
+        f"\\text{{{st.session_state.auto_slider_value}}} = 100 \\times \\left(1 - \\frac{{{slider_value}}}{{{max_distance}}}\\right)"
     )
 
     return 0 if st.session_state.auto_slider_value == 100 else slider_value
