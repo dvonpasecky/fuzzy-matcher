@@ -1,4 +1,3 @@
-
 # Levenshtein Distance Matcher
 
 ## Description
@@ -31,14 +30,6 @@ Install the required packages:
 pip install -r requirements.txt
 ```
 
-### Using conda
-
-You can also use conda to install the required packages:
-
-```bash
-conda install --file conda-requirements.txt
-```
-
 ## Usage
 
 ### Upload CSV File
@@ -66,3 +57,7 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 ## License
 
 [MIT License](LICENSE)
+
+## Hosted WebApp
+
+You can access the hosted webapp [here](https://fuzzy-matcher.streamlit.app/).
