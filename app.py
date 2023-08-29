@@ -1,4 +1,5 @@
 import itertools
+from io import BytesIO
 from typing import List, Tuple
 
 import pandas as pd
@@ -135,6 +136,29 @@ def handle_manual_slider(max_distance: int) -> int:
     return 0 if st.session_state.auto_slider_value == 100 else slider_value
 
 
+def create_download_button(
+    df: pd.DataFrame, filename: str = "filtered_data.csv"
+) -> None:
+    """Create a Streamlit button for downloading a DataFrame as a CSV file.
+
+    Args:
+        df (pd.DataFrame): The DataFrame to be downloaded.
+        filename (str): The name of the downloaded file.
+    """
+    if df.empty:
+        return
+
+    csv_buffer = BytesIO()
+    df.to_csv(csv_buffer, index=False)
+    csv_buffer.seek(0)
+    st.download_button(
+        "Download CSV",
+        csv_buffer,
+        file_name=filename,
+        mime="text/csv",
+    )
+
+
 def main():
     """Main function to run the Streamlit app."""
     st.title("Levenshtein Distance Matcher")
@@ -174,6 +198,9 @@ def main():
 
     filtered_df = filter_by_slider(df, threshold)
     st.dataframe(filtered_df)
+
+    if not filtered_df.empty:
+        create_download_button(filtered_df)
 
 
 if __name__ == "__main__":
