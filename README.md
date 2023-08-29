@@ -13,6 +13,10 @@ This project is a text-matching tool that uses the Levenshtein distance algorith
 - [Contributing](#contributing)
 - [License](#license)
 
+## What is Levenshtein Distance?
+
+[Levenshtein Distance](https://en.wikipedia.org/wiki/Levenshtein_distance)
+
 ## Installation
 
 Clone the repository:

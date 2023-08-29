@@ -21,7 +21,7 @@ def handle_file_upload() -> Tuple[List[str], List[str]]:
     """Handles file upload and returns columns as lists."""
     uploaded_file = st.sidebar.file_uploader("Upload a CSV file", type=["csv"])
     if uploaded_file is not None:
-        df = pd.read_csv(uploaded_file)
+        df = pd.read_csv(uploaded_file).astype(str).fillna("")
         return df.iloc[:, 0].tolist(), df.iloc[:, 1].tolist()
 
     return [], []
@@ -44,12 +44,12 @@ def handle_manual_input() -> Tuple[List[str], List[str]]:
 
     with col1:
         column1 = [
-            st.text_input(f"Column 1, String {i+1}")
+            st.text_input(f"Column 1, String {i+1}") or ""
             for i in range(st.session_state.num_strings)
         ]
     with col2:
         column2 = [
-            st.text_input(f"Column 2, String {i+1}")
+            st.text_input(f"Column 2, String {i+1}") or ""
             for i in range(st.session_state.num_strings)
         ]
 
@@ -138,6 +138,9 @@ def handle_manual_slider(max_distance: int) -> int:
 def main():
     """Main function to run the Streamlit app."""
     st.title("Levenshtein Distance Matcher")
+    st.markdown(
+        "Learn more about Levenshtein distance on [Wikipedia](https://en.wikipedia.org/wiki/Levenshtein_distance)"
+    )
     st.sidebar.header("User Options")
     initialize_state()
 
