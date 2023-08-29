@@ -10,7 +10,11 @@ MAX_INT_32 = 2**31 - 1  # Maximum 32-bit integer
 
 
 def initialize_state():
-    """Initialize Streamlit session state variables."""
+    """Initialize Streamlit session state variables.
+
+    Initialize session state variables including auto_slider_value,
+    manual_slider_value, and num_strings with default values.
+    """
     st.session_state.auto_slider_value = st.session_state.get("auto_slider_value", 80)
     st.session_state.manual_slider_value = st.session_state.get(
         "manual_slider_value", 1
@@ -19,7 +23,12 @@ def initialize_state():
 
 
 def handle_file_upload() -> Tuple[List[str], List[str]]:
-    """Handles file upload and returns columns as lists."""
+    """Handle file upload and return columns as lists.
+
+    Returns:
+        Tuple[List[str], List[str]]: Two lists containing data from the uploaded CSV file,
+        one for each column.
+    """
     uploaded_file = st.sidebar.file_uploader("Upload a CSV file", type=["csv"])
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file).astype(str).fillna("")
@@ -28,8 +37,37 @@ def handle_file_upload() -> Tuple[List[str], List[str]]:
     return [], []
 
 
+def get_input_fields(num_strings: int) -> Tuple[List[str], List[str]]:
+    """Get input fields for manual input.
+
+    Args:
+        num_strings (int): Number of input fields for each column.
+
+    Returns:
+        Tuple[List[str], List[str]]: Two lists containing the input from the user,
+        one for each column.
+    """
+    col1, col2 = st.sidebar.columns(2)
+
+    with col1:
+        column1 = [
+            st.text_input(f"Column 1, String {i+1}") or "" for i in range(num_strings)
+        ]
+    with col2:
+        column2 = [
+            st.text_input(f"Column 2, String {i+1}") or "" for i in range(num_strings)
+        ]
+
+    return column1, column2
+
+
 def handle_manual_input() -> Tuple[List[str], List[str]]:
-    """Handles manual input and returns columns as lists."""
+    """Handle manual input and return columns as lists.
+
+    Returns:
+        Tuple[List[str], List[str]]: Two lists containing input from the user,
+        one for each column.
+    """
     if "num_strings" not in st.session_state:
         st.session_state.num_strings = 1
 
@@ -41,26 +79,25 @@ def handle_manual_input() -> Tuple[List[str], List[str]]:
     if col_button2.button("Remove a Row"):
         st.session_state.num_strings = max(1, st.session_state.num_strings - 1)
 
-    col1, col2 = st.sidebar.columns(2)
-
-    with col1:
-        column1 = [
-            st.text_input(f"Column 1, String {i+1}") or ""
-            for i in range(st.session_state.num_strings)
-        ]
-    with col2:
-        column2 = [
-            st.text_input(f"Column 2, String {i+1}") or ""
-            for i in range(st.session_state.num_strings)
-        ]
-
-    return column1, column2
+    return get_input_fields(st.session_state.num_strings)
 
 
 def calculate_levenshtein(
     column1: List[str], column2: List[str], case_sensitive: bool = True
 ) -> pd.DataFrame:
-    """Calculates Levenshtein distance between two lists of strings."""
+    """Calculate Levenshtein distance between two lists of strings.
+
+    Args:
+        column1 (List[str]): The first list of strings.
+        column2 (List[str]): The second list of strings.
+        case_sensitive (bool, optional): Whether or not the calculation should be case-sensitive. Defaults to True.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the calculated Levenshtein distances.
+    """
+    column1 = [str(x) for x in column1]
+    column2 = [str(y) for y in column2]
+
     if not case_sensitive:
         column1 = [x.lower() for x in column1]
         column2 = [y.lower() for y in column2]
@@ -81,7 +118,15 @@ def calculate_levenshtein(
 
 
 def filter_by_slider(df: pd.DataFrame, threshold: int) -> pd.DataFrame:
-    """Filters a DataFrame based on a Levenshtein distance threshold."""
+    """Filter a DataFrame based on a Levenshtein distance threshold.
+
+    Args:
+        df (pd.DataFrame): The DataFrame to be filtered.
+        threshold (int): The maximum Levenshtein distance for a record to be included.
+
+    Returns:
+        pd.DataFrame: The filtered DataFrame.
+    """
     filtered_df = df[df["LevenshteinDistance"] <= threshold].copy()
     filtered_df.sort_values(by="LevenshteinDistance", inplace=True)
     filtered_df.reset_index(drop=True, inplace=True)
@@ -90,7 +135,14 @@ def filter_by_slider(df: pd.DataFrame, threshold: int) -> pd.DataFrame:
 
 
 def handle_automatic_slider(max_distance: int) -> int:
-    """Handles automatic slider value and returns the calculated threshold."""
+    """Handle automatic slider value and return the calculated threshold.
+
+    Args:
+        max_distance (int): The maximum Levenshtein distance in the current dataset.
+
+    Returns:
+        int: The calculated threshold based on the automatic slider value.
+    """
     st.latex(
         r"\text{Threshold} = \text{Max Distance} \times \left(1 - \frac{\text{Slider Value}}{100}\right)"
     )
@@ -111,6 +163,14 @@ def handle_automatic_slider(max_distance: int) -> int:
 
 
 def handle_manual_slider(max_distance: int) -> int:
+    """Handle manual slider value and return the threshold.
+
+    Args:
+        max_distance (int): The maximum Levenshtein distance in the current dataset.
+
+    Returns:
+        int: The threshold set by the manual slider.
+    """
     st.latex(
         r"\text{Automatic Slider Value} = 100 \times \left(1 - \frac{\text{Manual Threshold}}{\text{Max Distance}}\right)"
     )
@@ -160,7 +220,11 @@ def create_download_button(
 
 
 def main():
-    """Main function to run the Streamlit app."""
+    """Main function to run the Streamlit app.
+
+    The main function orchestrates the entire Streamlit application, from user input
+    to displaying results. It uses the helper functions defined in the module.
+    """
     st.title("Levenshtein Distance Matcher")
     st.markdown(
         "Learn more about Levenshtein distance on [Wikipedia](https://en.wikipedia.org/wiki/Levenshtein_distance)"
@@ -169,12 +233,10 @@ def main():
     initialize_state()
 
     input_method = st.sidebar.radio(
-        "Choose input method", ["Upload CSV File", "Manual Input"]
+        "Choose input method", ["Upload CSV", "Manual Input"]
     )
     column1, column2 = (
-        handle_file_upload()
-        if input_method == "Upload CSV File"
-        else handle_manual_input()
+        handle_file_upload() if input_method == "Upload CSV" else handle_manual_input()
     )
     if not column1 or not column2:
         return
