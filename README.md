@@ -8,15 +8,25 @@ This project is a text-matching tool that uses the Levenshtein distance algorith
 
 ## Table of Contents
 
-- [Installation](#installation)
-- [Usage](#usage)
-- [Contributing](#contributing)
-- [License](#license)
+- [Levenshtein Distance Matcher](#levenshtein-distance-matcher)
+  - [Description](#description)
+  - [Table of Contents](#table-of-contents)
+  - [What is Levenshtein Distance?](#what-is-levenshtein-distance)
+  - [Installation](#installation)
+    - [Using pip](#using-pip)
+  - [Usage](#usage)
+    - [Upload CSV](#upload-csv)
+    - [Manual Input](#manual-input)
+    - [Filtering Method](#filtering-method)
+    - [Case Sensitivity](#case-sensitivity)
+    - [Download CSV](#download-csv)
+  - [Contributing](#contributing)
+  - [License](#license)
+  - [Hosted WebApp](#hosted-webapp)
 
 ## What is Levenshtein Distance?
 
-
-Learn more about [Levenshtein distance on Wikipedia](https://en.wikipedia.org/wiki/Levenshtein_distance)
+Learn more about Levenshtein distance on [Wikipedia](https://en.wikipedia.org/wiki/Levenshtein_distance)
 
 ## Installation
 
