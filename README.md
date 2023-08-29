@@ -15,7 +15,8 @@ This project is a text-matching tool that uses the Levenshtein distance algorith
 
 ## What is Levenshtein Distance?
 
-[Levenshtein Distance](https://en.wikipedia.org/wiki/Levenshtein_distance)
+
+Learn more about [Levenshtein distance on Wikipedia](https://en.wikipedia.org/wiki/Levenshtein_distance)
 
 ## Installation
 
@@ -36,9 +37,9 @@ pip install -r requirements.txt
 
 ## Usage
 
-### Upload CSV File
+### Upload CSV
 
-1. Choose "Upload CSV File" from the sidebar.
+1. Choose "Upload CSV" from the sidebar.
 2. Upload your CSV file. The file should contain two columns of strings to be compared.
 
 ### Manual Input
@@ -53,6 +54,10 @@ Choose either the "Automatic Slider" or the "Manual Slider" to adjust the matchi
 ### Case Sensitivity
 
 Toggle the "Case Sensitive" option on for case-sensitive matching.
+
+### Download CSV
+
+Download the filtered results as a CSV file.
 
 ## Contributing
 
