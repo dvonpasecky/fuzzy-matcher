@@ -1,5 +1,7 @@
 import itertools
+from enum import Enum
 from io import BytesIO
+from random import shuffle
 from typing import List, Tuple
 
 import pandas as pd
@@ -9,17 +11,28 @@ from Levenshtein import distance as levenshtein_distance
 MAX_INT_32 = 2**31 - 1  # Maximum 32-bit integer
 
 
-def initialize_state():
-    """Initialize Streamlit session state variables.
+class DefaultSliderValues(Enum):
+    AUTO = 80
+    MANUAL = 1
 
-    Initialize session state variables including auto_slider_value,
-    manual_slider_value, and num_strings with default values.
+
+class DefaultStrings(Enum):
+    NUM = 1
+
+
+def initialize_state():
     """
-    st.session_state.auto_slider_value = st.session_state.get("auto_slider_value", 80)
-    st.session_state.manual_slider_value = st.session_state.get(
-        "manual_slider_value", 1
+    Initialize Streamlit session state variables.
+    """
+    st.session_state.auto_slider_value = st.session_state.get(
+        "auto_slider_value", DefaultSliderValues.AUTO.value
     )
-    st.session_state.num_strings = st.session_state.get("num_strings", 1)
+    st.session_state.manual_slider_value = st.session_state.get(
+        "manual_slider_value", DefaultSliderValues.MANUAL.value
+    )
+    st.session_state.num_strings = st.session_state.get(
+        "num_strings", DefaultStrings.NUM.value
+    )
 
 
 def handle_file_upload() -> Tuple[List[str], List[str]]:
@@ -48,15 +61,18 @@ def get_input_fields(num_strings: int) -> Tuple[List[str], List[str]]:
         one for each column.
     """
     col1, col2 = st.sidebar.columns(2)
+    column1 = []
+    column2 = []
 
     with col1:
-        column1 = [
-            st.text_input(f"Column 1, String {i+1}") or "" for i in range(num_strings)
-        ]
+        for i in range(num_strings):
+            default_val = st.session_state.get(f"col1_str_{i+1}", "")
+            column1.append(st.text_input(f"Column 1, String {i+1}", default_val))
+
     with col2:
-        column2 = [
-            st.text_input(f"Column 2, String {i+1}") or "" for i in range(num_strings)
-        ]
+        for i in range(num_strings):
+            default_val = st.session_state.get(f"col2_str_{i+1}", "")
+            column2.append(st.text_input(f"Column 2, String {i+1}", default_val))
 
     return column1, column2
 
@@ -219,6 +235,23 @@ def create_download_button(
     )
 
 
+def generate_demo_data() -> Tuple[List[str], List[str]]:
+    """
+    Generate demo data with specified Levenshtein distances.
+
+    Returns:
+        Tuple[List[str], List[str]]: Two lists containing strings for demo.
+    """
+
+    column1 = ["apple", "banana", "pear", "kiwi", "carrot"]
+    column2 = ["apple", "BANANA", "pears", "kiwiz", "carrotxx"]
+
+    shuffle(column1)
+    shuffle(column2)
+
+    return column1, column2
+
+
 def main():
     """Main function to run the Streamlit app.
 
@@ -232,9 +265,26 @@ def main():
     st.sidebar.header("User Options")
     initialize_state()
 
+    if "input_method" not in st.session_state:
+        st.session_state.input_method = "Upload CSV"
+
+    if st.sidebar.button("Generate Demo Data"):
+        column1, column2 = generate_demo_data()
+        st.session_state.num_strings = len(column1)
+
+        # Update session state with demo data and switch to manual input
+        for i, (val1, val2) in enumerate(zip(column1, column2)):
+            st.session_state[f"col1_str_{i+1}"] = val1
+            st.session_state[f"col2_str_{i+1}"] = val2
+        st.session_state.input_method = "Manual Input"
+
     input_method = st.sidebar.radio(
-        "Choose input method", ["Upload CSV", "Manual Input"]
+        "Choose input method",
+        ["Upload CSV", "Manual Input"],
+        index=0 if st.session_state.input_method == "Upload CSV" else 1,
     )
+    st.session_state.input_method = input_method
+
     column1, column2 = (
         handle_file_upload() if input_method == "Upload CSV" else handle_manual_input()
     )
