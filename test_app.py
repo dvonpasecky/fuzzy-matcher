@@ -54,7 +54,9 @@ def test_calculate_levenshtein_values():
     column1 = ["apple"]
     column2 = ["apple", "aplpe"]
     df = calculate_levenshtein(column1, column2)
-    assert df.loc[0, "LevenshteinDistance"] == 0
+    row = df[(df['String1'] == 'apple') & (df['String2'] == 'apple')]
+    assert row['LevenshteinDistance'].iloc[0] == 0
+
 
 
 def test_filter_by_slider_with_sample_data(sample_df):
