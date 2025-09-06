@@ -300,6 +300,9 @@ def main():
         column1, column2 = generate_demo_data()
         st.session_state.num_strings = len(column1)
 
+        # Clear the manual table df to force recreation with new data
+        st.session_state.manual_table_df = None
+
         # Update session state with demo data and switch to manual input
         for i, (val1, val2) in enumerate(zip(column1, column2, strict=False)):
             st.session_state[f"col1_str_{i + 1}"] = val1
