@@ -22,6 +22,12 @@ from app import (
 
 @pytest.fixture
 def sample_df():
+    """Fixture providing a sample DataFrame for testing.
+
+    Returns:
+        pd.DataFrame: A DataFrame with sample string pairs and Levenshtein distances.
+
+    """
     return pd.DataFrame(
         {
             "String1": ["apple", "orange", "banana"],
@@ -32,6 +38,7 @@ def sample_df():
 
 
 def test_initialize_state(mocker):
+    """Test the initialization of Streamlit session state variables."""
     mock_session_state = mocker.MagicMock()
     mocker.patch("app.st.session_state", mock_session_state)
 
@@ -47,6 +54,7 @@ def test_initialize_state(mocker):
 
 
 def test_calculate_levenshtein_structure():
+    """Test the structure of the DataFrame returned by calculate_levenshtein."""
     column1 = ["apple", "orange"]
     column2 = ["apple", "orange"]
     case_sensitive = True
@@ -59,6 +67,7 @@ def test_calculate_levenshtein_structure():
 
 
 def test_calculate_levenshtein_values():
+    """Test the values in the DataFrame returned by calculate_levenshtein."""
     column1 = ["apple"]
     column2 = ["apple", "aplpe"]
     df = calculate_levenshtein(column1, column2)
@@ -67,6 +76,7 @@ def test_calculate_levenshtein_values():
 
 
 def test_filter_by_slider_with_sample_data(sample_df):
+    """Test filtering by slider using sample data."""
     threshold = 2
     filtered_df = filter_by_slider(sample_df, threshold)
 
@@ -75,6 +85,7 @@ def test_filter_by_slider_with_sample_data(sample_df):
 
 
 def test_filter_by_slider_with_known_data():
+    """Test filtering by slider with known data."""
     df = pd.DataFrame(
         {
             "String1": ["apple", "apple"],
@@ -88,6 +99,7 @@ def test_filter_by_slider_with_known_data():
 
 
 def test_case_insensitivity():
+    """Test case insensitivity in Levenshtein calculation."""
     column1 = ["Apple", "Orange"]
     column2 = ["apple", "orange"]
     case_sensitive = False
@@ -97,17 +109,20 @@ def test_case_insensitivity():
 
 
 def test_empty_input():
+    """Test handling of empty input lists."""
     df = calculate_levenshtein([], [], True)
     assert df.empty
 
 
 def test_non_string_input():
+    """Test handling of non-string input."""
     df = calculate_levenshtein([str(x) for x in [1, 2, 3]], ["1", "2", "3"], True)
     assert not df.empty
     assert df.iloc[0]["LevenshteinDistance"] == 0
 
 
 def test_case_sensitivity():
+    """Test case sensitivity in Levenshtein calculation."""
     column1 = ["Apple", "Orange"]
     column2 = ["apple", "orange"]
     case_sensitive = True
@@ -117,6 +132,7 @@ def test_case_sensitivity():
 
 
 def test_large_levenshtein_distance():
+    """Test calculation of large Levenshtein distances."""
     column1 = ["apple"]
     column2 = ["orange"]
     df = calculate_levenshtein(column1, column2, True)
@@ -124,17 +140,20 @@ def test_large_levenshtein_distance():
 
 
 def test_zero_threshold(sample_df):
+    """Test filtering with zero threshold."""
     filtered_df = filter_by_slider(sample_df, 0)
     assert not filtered_df.empty
     assert filtered_df["LevenshteinDistance"].max() == 0
 
 
 def test_large_threshold(sample_df):
+    """Test filtering with large threshold."""
     filtered_df = filter_by_slider(sample_df, 100)
     assert not filtered_df.empty
     assert filtered_df["LevenshteinDistance"].max() <= 100
 
 
 def test_handle_file_upload(mocker):
+    """Test file upload handling."""
     mocker.patch("app.st.sidebar.file_uploader", return_value=None)
     assert handle_file_upload() == ([], [])
