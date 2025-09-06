@@ -1,29 +1,41 @@
+"""Streamlit app for fuzzy matching strings using Levenshtein distance.
+
+This module provides a web interface for uploading or manually entering string data,
+computing pairwise Levenshtein distances, filtering results, and downloading matches.
+"""
+
 import itertools
 from enum import Enum
 from io import BytesIO
 from random import shuffle
-from typing import List, Tuple
 
 import pandas as pd
 import streamlit as st
 from Levenshtein import distance as levenshtein_distance
 
+st.set_page_config(
+    page_title="Levenshtein Distance Matcher",
+    layout="wide",
+)
+
 MAX_INT_32 = 2**31 - 1  # Maximum 32-bit integer
 
 
 class DefaultSliderValues(Enum):
+    """Default slider values for automatic and manual filtering modes."""
+
     AUTO = 80
     MANUAL = 1
 
 
 class DefaultStrings(Enum):
+    """Default string values for manual input."""
+
     NUM = 1
 
 
 def initialize_state():
-    """
-    Initialize Streamlit session state variables.
-    """
+    """Initialize Streamlit session state variables."""
     st.session_state.auto_slider_value = st.session_state.get(
         "auto_slider_value", DefaultSliderValues.AUTO.value
     )
@@ -35,71 +47,82 @@ def initialize_state():
     )
 
 
-def handle_file_upload() -> Tuple[List[str], List[str]]:
+def handle_file_upload() -> tuple[list[str], list[str]]:
     """Handle file upload and return columns as lists.
 
     Returns:
-        Tuple[List[str], List[str]]: Two lists containing data from the uploaded CSV file,
+        tuple[list[str], list[str]]: Two lists containing data from the uploaded CSV file,
         one for each column.
+
     """
-    uploaded_file = st.sidebar.file_uploader("Upload a CSV file", type=["csv"])
+    uploaded_file = st.sidebar.file_uploader(
+        "Upload a CSV file",
+        type=["csv"],
+        accept_multiple_files=False,
+        help="Two columns expected. Left = Column 1, Right = Column 2.",
+    )
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file).astype(str).fillna("")
+        st.toast(f"Loaded {len(df)} rows from {uploaded_file.name}")
         return df.iloc[:, 0].tolist(), df.iloc[:, 1].tolist()
 
     return [], []
 
 
-def get_input_fields(num_strings: int) -> Tuple[List[str], List[str]]:
-    """Get input fields for manual input.
+def handle_manual_input() -> tuple[list[str], list[str]]:
+    """Inline manual input using st.data_editor with text-safe dtypes."""
+    df_initial = st.session_state.get("manual_table_df")
+    if df_initial is None:
+        base_rows = int(st.session_state.get("num_strings", 1))
+        df_initial = pd.DataFrame(
+            [
+                {
+                    "Column 1": st.session_state.get(f"col1_str_{i + 1}", ""),
+                    "Column 2": st.session_state.get(f"col2_str_{i + 1}", ""),
+                }
+                for i in range(base_rows)
+            ]
+        )
+    # Ensure text dtype for both columns
+    for col in ("Column 1", "Column 2"):
+        if col not in df_initial.columns:
+            df_initial[col] = pd.Series(dtype="string")
+    df_initial = df_initial.astype({"Column 1": "string", "Column 2": "string"})
 
-    Args:
-        num_strings (int): Number of input fields for each column.
+    st.subheader("Manual Input")
+    edited = st.data_editor(
+        df_initial,
+        num_rows="dynamic",
+        width="stretch",
+        key="manual_table_inline",
+        column_config={
+            "Column 1": st.column_config.TextColumn("Column 1", help="First string"),
+            "Column 2": st.column_config.TextColumn("Column 2", help="Second string"),
+        },
+    )
 
-    Returns:
-        Tuple[List[str], List[str]]: Two lists containing the input from the user,
-        one for each column.
-    """
-    col1, col2 = st.sidebar.columns(2)
-    column1 = []
-    column2 = []
+    df_save = edited.astype({"Column 1": "string", "Column 2": "string"}).fillna("")
+    st.session_state.manual_table_df = df_save
+    st.session_state.num_strings = len(df_save)
+    for i, row in enumerate(df_save.itertuples(index=False), start=1):
+        st.session_state[f"col1_str_{i}"] = getattr(row, "Column_1", "")
+        st.session_state[f"col2_str_{i}"] = getattr(row, "Column_2", "")
 
-    with col1:
-        for i in range(num_strings):
-            default_val = st.session_state.get(f"col1_str_{i+1}", "")
-            column1.append(st.text_input(f"Column 1, String {i+1}", default_val))
-
-    with col2:
-        for i in range(num_strings):
-            default_val = st.session_state.get(f"col2_str_{i+1}", "")
-            column2.append(st.text_input(f"Column 2, String {i+1}", default_val))
-
-    return column1, column2
-
-
-def handle_manual_input() -> Tuple[List[str], List[str]]:
-    """Handle manual input and return columns as lists.
-
-    Returns:
-        Tuple[List[str], List[str]]: Two lists containing input from the user,
-        one for each column.
-    """
-    if "num_strings" not in st.session_state:
-        st.session_state.num_strings = 1
-
-    col_button1, col_button2 = st.sidebar.columns(2)
-
-    if col_button1.button("Add a Row"):
-        st.session_state.num_strings += 1
-
-    if col_button2.button("Remove a Row"):
-        st.session_state.num_strings = max(1, st.session_state.num_strings - 1)
-
-    return get_input_fields(st.session_state.num_strings)
+    col1_list = (
+        df_save.get("Column 1", pd.Series([], dtype="string")).astype(str).tolist()
+    )
+    col2_list = (
+        df_save.get("Column 2", pd.Series([], dtype="string")).astype(str).tolist()
+    )
+    return col1_list, col2_list
 
 
+# Inline editor replaces the previous dialog-based editor
+
+
+@st.cache_data(show_spinner=False)
 def calculate_levenshtein(
-    column1: List[str], column2: List[str], case_sensitive: bool = True
+    column1: list[str], column2: list[str], case_sensitive: bool = True
 ) -> pd.DataFrame:
     """Calculate Levenshtein distance between two lists of strings.
 
@@ -110,6 +133,7 @@ def calculate_levenshtein(
 
     Returns:
         pd.DataFrame: A DataFrame containing the calculated Levenshtein distances.
+
     """
     column1 = [str(x) for x in column1]
     column2 = [str(y) for y in column2]
@@ -142,6 +166,7 @@ def filter_by_slider(df: pd.DataFrame, threshold: int) -> pd.DataFrame:
 
     Returns:
         pd.DataFrame: The filtered DataFrame.
+
     """
     filtered_df = df[df["LevenshteinDistance"] <= threshold].copy()
     filtered_df.sort_values(by="LevenshteinDistance", inplace=True)
@@ -158,6 +183,7 @@ def handle_automatic_slider(max_distance: int) -> int:
 
     Returns:
         int: The calculated threshold based on the automatic slider value.
+
     """
     st.latex(
         r"\text{Threshold} = \text{Max Distance} \times \left(1 - \frac{\text{Slider Value}}{100}\right)"
@@ -167,6 +193,7 @@ def handle_automatic_slider(max_distance: int) -> int:
         min_value=0,
         max_value=100,
         value=st.session_state.auto_slider_value,
+        help="Higher slider = stricter matches",
     )
     st.session_state.auto_slider_value = slider_value
     threshold = (
@@ -186,6 +213,7 @@ def handle_manual_slider(max_distance: int) -> int:
 
     Returns:
         int: The threshold set by the manual slider.
+
     """
     st.latex(
         r"\text{Automatic Slider Value} = 100 \times \left(1 - \frac{\text{Manual Threshold}}{\text{Max Distance}}\right)"
@@ -195,8 +223,8 @@ def handle_manual_slider(max_distance: int) -> int:
         min_value=0,
         max_value=max(max_distance, 1),
         value=st.session_state.manual_slider_value,
+        help="Higher threshold = allow more edits",
     )
-    st.session_state.manual_slider_value = slider_value
 
     if max_distance != 0:
         st.session_state.auto_slider_value = int(
@@ -220,6 +248,7 @@ def create_download_button(
     Args:
         df (pd.DataFrame): The DataFrame to be downloaded.
         filename (str): The name of the downloaded file.
+
     """
     if df.empty:
         return
@@ -235,14 +264,13 @@ def create_download_button(
     )
 
 
-def generate_demo_data() -> Tuple[List[str], List[str]]:
-    """
-    Generate demo data with specified Levenshtein distances.
+def generate_demo_data() -> tuple[list[str], list[str]]:
+    """Generate demo data with specified Levenshtein distances.
 
     Returns:
         Tuple[List[str], List[str]]: Two lists containing strings for demo.
-    """
 
+    """
     column1 = ["apple", "banana", "pear", "kiwi", "carrot"]
     column2 = ["apple", "BANANA", "pears", "kiwiz", "carrotxx"]
 
@@ -253,7 +281,7 @@ def generate_demo_data() -> Tuple[List[str], List[str]]:
 
 
 def main():
-    """Main function to run the Streamlit app.
+    """Run the Streamlit app.
 
     The main function orchestrates the entire Streamlit application, from user input
     to displaying results. It uses the helper functions defined in the module.
@@ -273,9 +301,9 @@ def main():
         st.session_state.num_strings = len(column1)
 
         # Update session state with demo data and switch to manual input
-        for i, (val1, val2) in enumerate(zip(column1, column2)):
-            st.session_state[f"col1_str_{i+1}"] = val1
-            st.session_state[f"col2_str_{i+1}"] = val2
+        for i, (val1, val2) in enumerate(zip(column1, column2, strict=False)):
+            st.session_state[f"col1_str_{i + 1}"] = val1
+            st.session_state[f"col2_str_{i + 1}"] = val2
         st.session_state.input_method = "Manual Input"
 
     input_method = st.sidebar.radio(
@@ -285,34 +313,63 @@ def main():
     )
     st.session_state.input_method = input_method
 
-    column1, column2 = (
-        handle_file_upload() if input_method == "Upload CSV" else handle_manual_input()
-    )
-    if not column1 or not column2:
-        return
+    if input_method == "Upload CSV":
+        # Single-page: controls + results; input comes from uploaded file
+        column1, column2 = handle_file_upload()
+        if not column1 or not column2:
+            st.info("Upload a CSV with two columns to begin.")
+            return
 
-    filter_method = st.sidebar.radio(
-        "Choose filtering method", ["Automatic Slider", "Manual Slider"]
-    )
-    case_sensitive = st.sidebar.toggle(
-        "Case Sensitive", value=True, help="Toggle on for case sensitivity"
-    )
+        filter_method = st.sidebar.radio(
+            "Choose filtering method", ["Automatic Slider", "Manual Slider"]
+        )
+        case_sensitive = st.sidebar.toggle(
+            "Case Sensitive", value=True, help="Toggle on for case sensitivity"
+        )
 
-    df = calculate_levenshtein(column1, column2, case_sensitive)
-    max_distance = 1 if df.empty else df["LevenshteinDistance"].max()
+        df = calculate_levenshtein(column1, column2, case_sensitive)
 
-    threshold = (
-        handle_automatic_slider(max_distance)
-        if filter_method == "Automatic Slider"
-        else handle_manual_slider(max_distance)
-    )
-    threshold = min(threshold, MAX_INT_32)
+        max_distance = 1 if df.empty else df["LevenshteinDistance"].max()
+        threshold = (
+            handle_automatic_slider(max_distance)
+            if filter_method == "Automatic Slider"
+            else handle_manual_slider(max_distance)
+        )
+        threshold = min(threshold, MAX_INT_32)
 
-    filtered_df = filter_by_slider(df, threshold)
-    st.dataframe(filtered_df)
+        st.subheader("Results")
+        filtered_df = filter_by_slider(df, threshold)
+        st.dataframe(filtered_df, width="stretch")
+        if not filtered_df.empty:
+            create_download_button(filtered_df)
+    else:
+        column1, column2 = handle_manual_input()
+        if not column1 or not column2:
+            st.info("Add at least one row in each column.")
+            return
 
-    if not filtered_df.empty:
-        create_download_button(filtered_df)
+        st.subheader("Filter")
+        filter_method = st.sidebar.radio(
+            "Choose filtering method", ["Automatic Slider", "Manual Slider"]
+        )
+        case_sensitive = st.sidebar.toggle(
+            "Case Sensitive", value=True, help="Toggle on for case sensitivity"
+        )
+
+        df = calculate_levenshtein(column1, column2, case_sensitive)
+        max_distance = 1 if df.empty else df["LevenshteinDistance"].max()
+        threshold = (
+            handle_automatic_slider(max_distance)
+            if filter_method == "Automatic Slider"
+            else handle_manual_slider(max_distance)
+        )
+        threshold = min(threshold, MAX_INT_32)
+
+        st.subheader("Results")
+        filtered_df = filter_by_slider(df, threshold)
+        st.dataframe(filtered_df, width="stretch")
+        if not filtered_df.empty:
+            create_download_button(filtered_df)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,14 @@
+"""Unit tests for fuzzy-matcher app functions.
+
+This module tests:
+- State initialization
+- Levenshtein calculation
+- Filtering by slider
+- File upload handling
+"""
+
 import pandas as pd
 import pytest
-import pytest_mock
 
 from app import (
     DefaultSliderValues,
@@ -54,9 +62,8 @@ def test_calculate_levenshtein_values():
     column1 = ["apple"]
     column2 = ["apple", "aplpe"]
     df = calculate_levenshtein(column1, column2)
-    row = df[(df['String1'] == 'apple') & (df['String2'] == 'apple')]
-    assert row['LevenshteinDistance'].iloc[0] == 0
-
+    row = df[(df["String1"] == "apple") & (df["String2"] == "apple")]
+    assert row["LevenshteinDistance"].iloc[0] == 0
 
 
 def test_filter_by_slider_with_sample_data(sample_df):
@@ -95,7 +102,7 @@ def test_empty_input():
 
 
 def test_non_string_input():
-    df = calculate_levenshtein([1, 2, 3], ["1", "2", "3"], True)
+    df = calculate_levenshtein([str(x) for x in [1, 2, 3]], ["1", "2", "3"], True)
     assert not df.empty
     assert df.iloc[0]["LevenshteinDistance"] == 0
 
